@@ -7,17 +7,32 @@ document.addEventListener('DOMContentLoaded', function() {
     closeTabsButton.style.display = checkedBoxes.length > 0 ? 'block' : 'none';
   }
 
-  chrome.tabs.query({}, function(tabs) {
+  // Store tab data for reordering
+  let tabData = [];
+
+  // Get the browser API (works for both Chrome and Firefox)
+  const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
+
+  browserAPI.tabs.query({}, function(tabs) {
     const tabsList = document.getElementById('tabsList');
-    tabs.forEach(tab => {
+    tabData = tabs; // Store the tab data
+
+    tabs.forEach((tab, index) => {
       const li = document.createElement('li');
-      li.style.display = 'flex';
-      li.style.justifyContent = 'space-between';
-      li.style.alignItems = 'center';
+      li.draggable = true;
+      li.dataset.tabId = tab.id;
+      li.dataset.index = index;
+      
+      // Drag and drop event handlers
+      li.addEventListener('dragstart', handleDragStart);
+      li.addEventListener('dragend', handleDragEnd);
+      li.addEventListener('dragover', handleDragOver);
+      li.addEventListener('dragenter', handleDragEnter);
+      li.addEventListener('dragleave', handleDragLeave);
+      li.addEventListener('drop', handleDrop);
       
       const leftContent = document.createElement('div');
-      leftContent.style.display = 'flex';
-      leftContent.style.alignItems = 'center';
+      leftContent.className = 'left-content';
       
       const img = document.createElement('img');
       img.src = tab.favIconUrl || '';
@@ -29,18 +44,27 @@ document.addEventListener('DOMContentLoaded', function() {
       leftContent.appendChild(document.createTextNode(tab.title));
       
       const rightContent = document.createElement('div');
-      rightContent.style.display = 'flex';
-      rightContent.style.alignItems = 'center';
+      rightContent.className = 'right-content';
+      
+      const refreshIcon = document.createElement('img');
+      refreshIcon.src = 'icons/refresh.png';
+      refreshIcon.alt = 'Refresh';
+      refreshIcon.style.width = '16px';
+      refreshIcon.style.height = '16px';
+      refreshIcon.style.cursor = 'pointer';
+      refreshIcon.onclick = function() {
+        browserAPI.tabs.reload(tab.id);
+      };
+      rightContent.appendChild(refreshIcon);
       
       const trashIcon = document.createElement('img');
       trashIcon.src = 'icons/trash-solid.svg';
       trashIcon.alt = 'Close';
       trashIcon.style.width = '16px';
       trashIcon.style.height = '16px';
-      trashIcon.style.marginRight = '8px';
       trashIcon.style.cursor = 'pointer';
       trashIcon.onclick = function() {
-        chrome.tabs.remove(tab.id);
+        browserAPI.tabs.remove(tab.id);
         li.remove();
       };
       rightContent.appendChild(trashIcon);
@@ -57,20 +81,71 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
+  // Drag and drop handlers
+  function handleDragStart(e) {
+    this.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', this.dataset.tabId);
+    // Firefox requires this to be set
+    e.dataTransfer.setData('application/x-moz-node', '');
+  }
+
+  function handleDragEnd(e) {
+    this.classList.remove('dragging');
+  }
+
+  function handleDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    return false;
+  }
+
+  function handleDragEnter(e) {
+    e.preventDefault();
+    this.classList.add('drag-over');
+  }
+
+  function handleDragLeave(e) {
+    this.classList.remove('drag-over');
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    this.classList.remove('drag-over');
+    
+    const draggedTabId = parseInt(e.dataTransfer.getData('text/plain'));
+    const targetTabId = parseInt(this.dataset.tabId);
+    
+    if (draggedTabId !== targetTabId) {
+      browserAPI.tabs.move(draggedTabId, { index: parseInt(this.dataset.index) })
+        .then(() => {
+          // Refresh the tab list after moving
+          location.reload();
+        })
+        .catch(error => {
+          console.error('Error moving tab:', error);
+        });
+    }
+  }
+
   // Add close tabs button functionality
   closeTabsButton.addEventListener('click', function() {
     const checkboxes = document.querySelectorAll('#tabsList input[type="checkbox"]:checked');
     const tabIds = Array.from(checkboxes).map(checkbox => parseInt(checkbox.dataset.tabId));
     
     if (tabIds.length > 0) {
-      chrome.tabs.remove(tabIds, function() {
-        // Remove the closed tabs from the list
-        checkboxes.forEach(checkbox => {
-          checkbox.closest('li').remove();
+      browserAPI.tabs.remove(tabIds)
+        .then(() => {
+          // Remove the closed tabs from the list
+          checkboxes.forEach(checkbox => {
+            checkbox.closest('li').remove();
+          });
+          // Hide the button after closing tabs
+          closeTabsButton.style.display = 'none';
+        })
+        .catch(error => {
+          console.error('Error closing tabs:', error);
         });
-        // Hide the button after closing tabs
-        closeTabsButton.style.display = 'none';
-      });
     }
   });
 }); 

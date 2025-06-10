@@ -22,6 +22,31 @@
     #tabsList li {
       padding: 5px;
       border-bottom: 1px solid #eee;
+      cursor: move;
+      user-select: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    #tabsList li .left-content {
+      display: flex;
+      align-items: center;
+      flex: 1;
+      min-width: 0;
+      margin-right: 10px;
+    }
+    #tabsList li .right-content {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    #tabsList li.dragging {
+      opacity: 0.5;
+      background-color: #f0f0f0;
+    }
+    #tabsList li.drag-over {
+      border-top: 2px solid #007bff;
     }
     #closeTabsButton {
       position: fixed;
