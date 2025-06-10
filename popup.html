@@ -7,6 +7,8 @@
       width: 400px;
       padding: 10px;
       font-family: Arial, sans-serif;
+      position: relative;
+      min-height: 200px;
     }
     h1 {
       font-size: 18px;
@@ -15,16 +17,33 @@
     #tabsList {
       list-style: none;
       padding: 0;
+      margin-bottom: 40px;
     }
     #tabsList li {
       padding: 5px;
       border-bottom: 1px solid #eee;
+    }
+    #closeTabsButton {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      background-color: #ff4444;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    #closeTabsButton:hover {
+      background-color: #ff0000;
     }
   </style>
 </head>
 <body>
   <h1>Open Tabs</h1>
   <ul id="tabsList"></ul>
+  <button id="closeTabsButton">Close Selected Tabs</button>
   <script src="popup.js"></script>
 </body>
 </html> 

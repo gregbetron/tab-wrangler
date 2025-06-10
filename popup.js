@@ -1,4 +1,12 @@
 document.addEventListener('DOMContentLoaded', function() {
+  const closeTabsButton = document.getElementById('closeTabsButton');
+  closeTabsButton.style.display = 'none'; // Initially hide the button
+
+  function updateCloseButtonVisibility() {
+    const checkedBoxes = document.querySelectorAll('#tabsList input[type="checkbox"]:checked');
+    closeTabsButton.style.display = checkedBoxes.length > 0 ? 'block' : 'none';
+  }
+
   chrome.tabs.query({}, function(tabs) {
     const tabsList = document.getElementById('tabsList');
     tabs.forEach(tab => {
@@ -39,11 +47,30 @@ document.addEventListener('DOMContentLoaded', function() {
       
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
+      checkbox.dataset.tabId = tab.id;
+      checkbox.addEventListener('change', updateCloseButtonVisibility);
       rightContent.appendChild(checkbox);
       
       li.appendChild(leftContent);
       li.appendChild(rightContent);
       tabsList.appendChild(li);
     });
+  });
+
+  // Add close tabs button functionality
+  closeTabsButton.addEventListener('click', function() {
+    const checkboxes = document.querySelectorAll('#tabsList input[type="checkbox"]:checked');
+    const tabIds = Array.from(checkboxes).map(checkbox => parseInt(checkbox.dataset.tabId));
+    
+    if (tabIds.length > 0) {
+      chrome.tabs.remove(tabIds, function() {
+        // Remove the closed tabs from the list
+        checkboxes.forEach(checkbox => {
+          checkbox.closest('li').remove();
+        });
+        // Hide the button after closing tabs
+        closeTabsButton.style.display = 'none';
+      });
+    }
   });
 }); 
