@@ -92,40 +92,76 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function handleDragEnd(e) {
     this.classList.remove('dragging');
+    // Remove all drop indicators
+    document.querySelectorAll('#tabsList li.drop-indicator').forEach(item => {
+      item.classList.remove('drop-indicator');
+    });
   }
 
   function handleDragOver(e) {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
+    
+    const draggingItem = document.querySelector('.dragging');
+    if (!draggingItem) return;
+
+    const siblings = [...document.querySelectorAll('#tabsList li:not(.dragging)')];
+    const closestItem = getClosestItem(siblings, e.clientY);
+    
+    // Remove all existing drop indicators
+    document.querySelectorAll('#tabsList li.drop-indicator').forEach(item => {
+      item.classList.remove('drop-indicator');
+    });
+    
+    // Add drop indicator to the closest item
+    if (closestItem) {
+      closestItem.classList.add('drop-indicator');
+    }
+    
     return false;
   }
 
   function handleDragEnter(e) {
     e.preventDefault();
-    this.classList.add('drag-over');
   }
 
   function handleDragLeave(e) {
-    this.classList.remove('drag-over');
+    e.preventDefault();
   }
 
   function handleDrop(e) {
     e.preventDefault();
-    this.classList.remove('drag-over');
     
     const draggedTabId = parseInt(e.dataTransfer.getData('text/plain'));
-    const targetTabId = parseInt(this.dataset.tabId);
+    const dropIndicator = document.querySelector('#tabsList li.drop-indicator');
     
-    if (draggedTabId !== targetTabId) {
-      browserAPI.tabs.move(draggedTabId, { index: parseInt(this.dataset.index) })
-        .then(() => {
-          // Refresh the tab list after moving
-          location.reload();
-        })
-        .catch(error => {
-          console.error('Error moving tab:', error);
-        });
+    if (dropIndicator) {
+      const targetIndex = parseInt(dropIndicator.dataset.index);
+      
+      if (draggedTabId !== parseInt(dropIndicator.dataset.tabId)) {
+        browserAPI.tabs.move(draggedTabId, { index: targetIndex })
+          .then(() => {
+            // Refresh the tab list after moving
+            location.reload();
+          })
+          .catch(error => {
+            console.error('Error moving tab:', error);
+          });
+      }
     }
+  }
+
+  function getClosestItem(items, y) {
+    return items.reduce((closest, child) => {
+      const box = child.getBoundingClientRect();
+      const offset = y - (box.top + box.height / 2);
+      
+      if (offset < 0 && offset > closest.offset) {
+        return { offset: offset, element: child };
+      } else {
+        return closest;
+      }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
   }
 
   // Add close tabs button functionality
