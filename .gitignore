@@ -1,2 +1,5 @@
 # IDE and editor files
 .cursor/
+
+# Image files
+lasso.png
